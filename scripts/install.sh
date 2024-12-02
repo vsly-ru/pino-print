@@ -43,8 +43,8 @@ fi
 
 # Verify installation
 if command -v $APP_NAME &> /dev/null; then
-    echo "✅ Installation complete! You can now use '$APP_NAME' command from anywhere in your terminal."
-    $APP_NAME -v
+    echo "✅ Installation complete! You can now use '$APP_NAME' command from anywhere in your terminal." | $APP_NAME -tw
+    $APP_NAME -v | $APP_NAME -tw
 else
     echo "⚠️  Installation succeeded but $APP_NAME is not in PATH"
     echo "You might need to add $INSTALL_DIR to your PATH"
