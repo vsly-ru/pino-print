@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -130,7 +131,7 @@ func getLevelName(level int) string {
 
 func main() {
 	if len(os.Args) > 1 && (os.Args[1] == "-v" || os.Args[1] == "--version") {
-		fmt.Printf("%spino-print%s %sv0.1.1%s\n", green, reset, blue, reset)
+		fmt.Printf("%spino-print%s %sv0.1.2%s\n", green, reset, blue, reset)
 		os.Exit(0)
 	}
 
@@ -148,11 +149,16 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Parse runtime command line flags
+	// Move ourselves out of the foreground process group
+	// This allows signals to be propagated to all processes in the pipeline
+	// Fixes the issue where ^C would only kill the main process and not the pipeline
+	if err := syscall.Setpgid(0, 0); err != nil {
+		fmt.Fprintf(os.Stderr, "pino-print: Warning: couldn't set process group: %v\n", err)
+	}
+
 	flag.Parse()
 
 	scanner := bufio.NewScanner(os.Stdin)
-
 	for scanner.Scan() {
 		line := scanner.Text()
 
