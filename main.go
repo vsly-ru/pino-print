@@ -66,6 +66,14 @@ func print(text string) {
 	}
 }
 
+func printErr(err error, message string) {
+	text := fmt.Sprintf("%s%s%s", red, err, reset)
+	if message != "" {
+		text += fmt.Sprintf(" (%s)", message)
+	}
+	print(text)
+}
+
 // PinoLog represents the structure of a Pino log entry
 type PinoLog struct {
 	Level    int            `json:"level"`
@@ -129,9 +137,44 @@ func getLevelName(level int) string {
 	}
 }
 
+// Add this new helper function
+func formatDataValue(value any, indent string) string {
+	switch v := value.(type) {
+	case map[string]any:
+		if len(v) == 0 {
+			return "{}"
+		}
+		var fields []string
+		for k, val := range v {
+			fields = append(fields, fmt.Sprintf("%s%s%s%s: %s",
+				indent+"    ", // increased from 2 to 4 spaces
+				yellow,
+				k,
+				reset,
+				formatDataValue(val, indent+"    "), // increased from 2 to 4 spaces
+			))
+		}
+		return "\n" + strings.Join(fields, "\n")
+	case []any:
+		if len(v) == 0 {
+			return "[]"
+		}
+		var items []string
+		for _, item := range v {
+			items = append(items, fmt.Sprintf("%s- %s",
+				indent+"    ",                        // increased from 2 to 4 spaces
+				formatDataValue(item, indent+"    "), // increased from 2 to 4 spaces
+			))
+		}
+		return "\n" + strings.Join(items, "\n")
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
 func main() {
 	if len(os.Args) > 1 && (os.Args[1] == "-v" || os.Args[1] == "--version") {
-		fmt.Printf("%spino-print%s %sv0.1.2%s\n", green, reset, blue, reset)
+		fmt.Printf("%spino-print%s %sv0.1.3%s\n", green, reset, blue, reset)
 		os.Exit(0)
 	}
 
@@ -165,6 +208,7 @@ func main() {
 		// Parse the entire JSON into a map first
 		var rawLog map[string]any
 		if err := json.Unmarshal([]byte(line), &rawLog); err != nil {
+			// printErr(err, "not a valid JSON")
 			print(line)
 			continue
 		}
@@ -172,6 +216,13 @@ func main() {
 		// Parse the known fields into our struct
 		var log PinoLog
 		if err := json.Unmarshal([]byte(line), &log); err != nil {
+			// printErr(err, "not a valid Pino log")
+			print(line)
+			continue
+		}
+
+		// Skip if no timestamp (probably not a Pino log)
+		if log.Time == 0 {
 			print(line)
 			continue
 		}
@@ -183,7 +234,10 @@ func main() {
 			case "level", "time", "pid", "hostname", "msg", "module", "service":
 				continue
 			default:
-				dataFields = append(dataFields, fmt.Sprintf("%s%s%s: %v", yellow, k, reset, v))
+				dataFields = append(dataFields, fmt.Sprintf("%s%s%s: %s",
+					yellow, k, reset,
+					formatDataValue(v, ""),
+				))
 			}
 		}
 
