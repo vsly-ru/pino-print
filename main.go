@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	targetPrintTime = 322 * time.Millisecond // target print time for typewriter mode
-	minPrintTime    = 0 * time.Millisecond   // minimum to maintain some animation
+	targetPrintTime = 333 * time.Millisecond // target print time for typewriter mode
+	minPrintTime    = 1 * time.Millisecond   // minimum to maintain some animation
 )
 
 var (
@@ -64,14 +64,6 @@ func print(text string) {
 	} else {
 		fmt.Println(text)
 	}
-}
-
-func printErr(err error, message string) {
-	text := fmt.Sprintf("%s%s%s", red, err, reset)
-	if message != "" {
-		text += fmt.Sprintf(" (%s)", message)
-	}
-	print(text)
 }
 
 // PinoLog represents the structure of a Pino log entry
@@ -147,11 +139,11 @@ func formatDataValue(value any, indent string) string {
 		var fields []string
 		for k, val := range v {
 			fields = append(fields, fmt.Sprintf("%s%s%s%s: %s",
-				indent+"    ", // increased from 2 to 4 spaces
-				yellow,
+				indent+"• ",
+				blue,
 				k,
 				reset,
-				formatDataValue(val, indent+"    "), // increased from 2 to 4 spaces
+				formatDataValue(val, indent+"• "),
 			))
 		}
 		return "\n" + strings.Join(fields, "\n")
@@ -162,8 +154,8 @@ func formatDataValue(value any, indent string) string {
 		var items []string
 		for _, item := range v {
 			items = append(items, fmt.Sprintf("%s- %s",
-				indent+"    ",                        // increased from 2 to 4 spaces
-				formatDataValue(item, indent+"    "), // increased from 2 to 4 spaces
+				indent+"    ",
+				formatDataValue(item, indent+"    "),
 			))
 		}
 		return "\n" + strings.Join(items, "\n")
@@ -174,7 +166,7 @@ func formatDataValue(value any, indent string) string {
 
 func main() {
 	if len(os.Args) > 1 && (os.Args[1] == "-v" || os.Args[1] == "--version") {
-		fmt.Printf("%spino-print%s %sv0.1.3%s\n", green, reset, blue, reset)
+		fmt.Printf("%spino-print%s %sv0.1.4%s\n", green, reset, blue, reset)
 		os.Exit(0)
 	}
 
@@ -208,7 +200,6 @@ func main() {
 		// Parse the entire JSON into a map first
 		var rawLog map[string]any
 		if err := json.Unmarshal([]byte(line), &rawLog); err != nil {
-			// printErr(err, "not a valid JSON")
 			print(line)
 			continue
 		}
@@ -216,7 +207,6 @@ func main() {
 		// Parse the known fields into our struct
 		var log PinoLog
 		if err := json.Unmarshal([]byte(line), &log); err != nil {
-			// printErr(err, "not a valid Pino log")
 			print(line)
 			continue
 		}
@@ -235,7 +225,7 @@ func main() {
 				continue
 			default:
 				dataFields = append(dataFields, fmt.Sprintf("%s%s%s: %s",
-					yellow, k, reset,
+					blue, k, reset,
 					formatDataValue(v, ""),
 				))
 			}
@@ -244,7 +234,6 @@ func main() {
 		// Format timestamp
 		timestamp := time.UnixMilli(log.Time).Format("2006-01-02 15:04:05.000")
 
-		// Get level color and name
 		levelColor := getLevelColor(log.Level)
 		levelName := getLevelName(log.Level)
 
@@ -256,7 +245,7 @@ func main() {
 			module = "|" + module
 		}
 
-		// Print formatted log
+		// Format
 		logLine := fmt.Sprintf("%s %s[%s%s%s%s%s]%s %s",
 			timestamp,
 			levelColor,
@@ -269,12 +258,11 @@ func main() {
 			log.Msg,
 		)
 
-		// Print extra data fields if any
+		// Add extra data fields if any
 		if len(dataFields) > 0 {
-			logLine += fmt.Sprintf("\n • %s", strings.Join(dataFields, "\n • "))
+			logLine += fmt.Sprintf("\n• %s", strings.Join(dataFields, "\n• "))
 		}
 
-		// Print with or without animation
 		print(logLine)
 	}
 
@@ -284,7 +272,7 @@ func main() {
 	}
 
 	if *flagTypewriter {
-		close(printQueue) // Signal that no more prints will come
-		printWg.Wait()    // Wait for all prints to complete
+		close(printQueue)
+		printWg.Wait()
 	}
 }
