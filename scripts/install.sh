@@ -4,7 +4,7 @@
 set -e
 
 APP_NAME="pino-print"
-INSTALL_DIR="/usr/local/bin"
+INSTALL_DIR="/Users/dev/Developer/bin"
 
 # Check if Go is installed
 if ! command -v go &> /dev/null; then

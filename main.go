@@ -19,7 +19,7 @@ const (
 
 var (
 	flagTypewriter = flag.Bool("tw", false, "Enable typewriter animation mode")
-	printQueue     = make(chan string, 1000)
+	printQueue     = make(chan string, 1024)
 	printWg        sync.WaitGroup
 )
 
@@ -139,11 +139,11 @@ func formatDataValue(value any, indent string) string {
 		var fields []string
 		for k, val := range v {
 			fields = append(fields, fmt.Sprintf("%s%s%s%s: %s",
-				indent+"• ",
+				indent+" • ",
 				blue,
 				k,
 				reset,
-				formatDataValue(val, indent+"• "),
+				formatDataValue(val, indent+" • "),
 			))
 		}
 		return "\n" + strings.Join(fields, "\n")
@@ -159,6 +159,16 @@ func formatDataValue(value any, indent string) string {
 			))
 		}
 		return "\n" + strings.Join(items, "\n")
+	case float64:
+		if v == float64(int64(v)) {
+			return fmt.Sprintf("%.0f", v)
+		}
+		return fmt.Sprintf("%.6f", v)
+	case float32:
+		if float64(v) == float64(int32(v)) {
+			return fmt.Sprintf("%.0f", v)
+		}
+		return fmt.Sprintf("%.6f", v)
 	default:
 		return fmt.Sprintf("%v", v)
 	}
@@ -166,7 +176,7 @@ func formatDataValue(value any, indent string) string {
 
 func main() {
 	if len(os.Args) > 1 && (os.Args[1] == "-v" || os.Args[1] == "--version") {
-		fmt.Printf("%spino-print%s %sv0.1.4%s\n", green, reset, blue, reset)
+		fmt.Printf("%spino-print%s %sv0.1.5%s\n", green, reset, blue, reset)
 		os.Exit(0)
 	}
 
@@ -194,6 +204,10 @@ func main() {
 	flag.Parse()
 
 	scanner := bufio.NewScanner(os.Stdin)
+	// buffer 400 MB
+	buf := make([]byte, 400*1024*1024)
+	scanner.Buffer(buf, len(buf))
+
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -260,7 +274,7 @@ func main() {
 
 		// Add extra data fields if any
 		if len(dataFields) > 0 {
-			logLine += fmt.Sprintf("\n• %s", strings.Join(dataFields, "\n• "))
+			logLine += fmt.Sprintf("\n» %s", strings.Join(dataFields, "\n» "))
 		}
 
 		print(logLine)
